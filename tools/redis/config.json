@@ -1,0 +1,18 @@
+{
+  "dev": {
+    "host": "127.0.0.1",
+    "port": "6379",
+    "protocol": "tcp",
+    "is_keep_alive": true,
+    "time_out": 0,
+    "valid": true
+  },
+  "prod": {
+    "host": "127.0.0.1",
+    "port": "6379",
+    "protocol": "tcp",
+    "is_keep_alive": true,
+    "time_out": 0,
+    "valid": false
+  }
+}
