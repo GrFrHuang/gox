@@ -4,7 +4,7 @@ import (
 	"crypto/md5"
 	"io"
 	"fmt"
-	"gox/log"
+	"github.com/GrFrHuang/gox/log"
 	"bytes"
 	"encoding/gob"
 )
