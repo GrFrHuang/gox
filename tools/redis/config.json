@@ -5,6 +5,7 @@
     "protocol": "tcp",
     "is_keep_alive": true,
     "time_out": 0,
+    "dump_path": "",
     "valid": true
   },
   "prod": {
@@ -13,6 +14,7 @@
     "protocol": "tcp",
     "is_keep_alive": true,
     "time_out": 0,
+    "dump_path": "",
     "valid": false
   }
 }

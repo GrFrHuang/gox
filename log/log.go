@@ -20,7 +20,7 @@ const (
 
 var _logger *Logger
 
-// todo init log target
+// Init log target
 func init() {
 	_logger = NewLogger()
 }
