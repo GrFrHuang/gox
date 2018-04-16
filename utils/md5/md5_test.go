@@ -2,7 +2,7 @@ package md5
 
 import (
 	"testing"
-	"gox/log"
+	"github.com/GrFrHuang/gox/log"
 )
 
 type Student struct {
