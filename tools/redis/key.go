@@ -12,6 +12,9 @@ const (
 // Get Value by key string.
 func (redis *Redis) Get(key interface{}) (string, error) {
 	result, err := _redis.String(redis.conn.Do("GET", key))
+	if err == _redis.ErrNil {
+		return "", nil
+	}
 	return result, err
 }
 
@@ -22,7 +25,7 @@ func (redis *Redis) KeysByRegexp(pattern string) ([]string, error) {
 }
 
 // Set a key-value in redis server by specify expire type and time.
-func (redis *Redis) Set(key string, value interface{}, expireTime int, expireType string) (error) {
+func (redis *Redis) Set(key, value interface{}, expireTime int, expireType string) (error) {
 	var args []interface{}
 	args = append(args, key, value)
 	switch expireType {

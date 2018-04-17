@@ -6,7 +6,7 @@ package redis
 
 import (
 	_redis "github.com/gomodule/redigo/redis"
-	"gox/log"
+	"github.com/GrFrHuang/gox/log"
 	"encoding/json"
 )
 

@@ -9,7 +9,7 @@ import (
 var conn *Redis
 
 func init() {
-	conn = NewRedis()
+	conn = newRedis()
 }
 
 func TestRedisKey(t *testing.T) {
