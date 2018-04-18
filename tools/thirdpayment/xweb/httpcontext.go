@@ -2,8 +2,8 @@ package xweb
 
 import (
 	"fmt"
-	"github.com/cxuhua/xweb/logging"
-	"github.com/cxuhua/xweb/martini"
+	"github.com/GrFrHuang/gox/tools/thirdpayment/xweb/logging"
+	"github.com/GrFrHuang/gox/tools/thirdpayment/xweb/martini"
 	"io"
 	"io/ioutil"
 	"mime"

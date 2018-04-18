@@ -1,7 +1,7 @@
 package sessions
 
 import (
-	"github.com/cxuhua/xweb/martini"
+	"github.com/GrFrHuang/gox/tools/thirdpayment/xweb/martini"
 	"net/http"
 	"net/http/httptest"
 	"strings"

@@ -20,8 +20,8 @@
 package sessions
 
 import (
-	"github.com/cxuhua/xweb/logging"
-	"github.com/cxuhua/xweb/martini"
+	"github.com/GrFrHuang/gox/tools/thirdpayment/xweb/logging"
+	"github.com/GrFrHuang/gox/tools/thirdpayment/xweb/martini"
 	"github.com/gorilla/context"
 	"github.com/gorilla/sessions"
 	"net/http"

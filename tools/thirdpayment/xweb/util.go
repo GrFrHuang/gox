@@ -3,7 +3,7 @@ package xweb
 import (
 	"crypto/rand"
 	"fmt"
-	"github.com/cxuhua/xweb/now"
+	"github.com/GrFrHuang/gox/tools/thirdpayment/xweb/now"
 	"math/big"
 	"strconv"
 	"time"

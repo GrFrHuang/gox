@@ -1,7 +1,7 @@
 package martini
 
 import (
-	"github.com/cxuhua/xweb/inject"
+	"github.com/GrFrHuang/gox/tools/thirdpayment/xweb/inject"
 	"net/http"
 	"reflect"
 )

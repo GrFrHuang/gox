@@ -8,7 +8,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
-	"github.com/cxuhua/xweb"
+	"github.com/GrFrHuang/gox/tools/thirdpayment/xweb"
 	"html/template"
 	"io"
 	"reflect"
@@ -1328,6 +1328,11 @@ type WXUnifiedorderResponse struct {
 	ReturnMsg  string   `xml:"return_msg,omitempty" sign:"true"`  //返回信息，如非空，为错误原因
 	Sign       string   `xml:"sign,omitempty"  sign:"false"`      //sign=false表示不参与签名
 	TradeType  string   `xml:"trade_type,omitempty" sign:"true"`
+}
+
+func (this WXUnifiedorderResponse) SignValid() bool {
+	sign := WXSign(this)
+	return sign == this.Sign
 }
 
 func (this WXUnifiedorderResponse) Error() error {

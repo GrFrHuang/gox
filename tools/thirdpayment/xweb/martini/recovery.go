@@ -3,8 +3,8 @@ package martini
 import (
 	"bytes"
 	"fmt"
-	"github.com/cxuhua/xweb/inject"
-	"github.com/cxuhua/xweb/logging"
+	"github.com/GrFrHuang/gox/tools/thirdpayment/xweb/inject"
+	"github.com/GrFrHuang/gox/tools/thirdpayment/xweb/logging"
 	"io/ioutil"
 	"net/http"
 	"runtime"

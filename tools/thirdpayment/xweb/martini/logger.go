@@ -1,7 +1,7 @@
 package martini
 
 import (
-	"github.com/cxuhua/xweb/logging"
+	"github.com/GrFrHuang/gox/tools/thirdpayment/xweb/logging"
 	"net/http"
 	"time"
 )
