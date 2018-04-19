@@ -18,19 +18,14 @@ func (this *AliPay) TradePagePay(param AliPayTradePagePay) (results *url.URL, er
 	return results, err
 }
 
-//// TradeAppPay https://doc.open.alipay.com/doc2/detail.htm?treeId=204&articleId=105462&docType=1
-//func (this *AliPay) TradeAppPay(param AliPayTradeAppPay) (results string, err error) {
-//	p, err := this.URLValues(param)
-//	if err != nil {
-//		return "", err
-//	}
-//	return p.Encode(), err
-//}
-
-//TradeAppPay https://doc.open.alipay.com/doc2/detail.htm?treeId=204&articleId=105462&docType=1
-func (this *AliPay) TradeAppPay(param AliPayTradeAppPay) (results *AliPayTradePreCreateResponse, err error) {
-	err = this.DoRequest("POST", param, &results)
-	return results, err
+// TradeAppPay https://doc.open.alipay.com/doc2/detail.htm?treeId=204&articleId=105462&docType=1
+// Server don't place the order, The order is maked by client, server just return the app pay params.
+func (this *AliPay) TradeAppPay(param AliPayTradeAppPay) (results string, err error) {
+	p, err := this.URLValues(param)
+	if err != nil {
+		return "", err
+	}
+	return p.Encode(), err
 }
 
 // TradeFastpayRefundQuery https://doc.open.alipay.com/doc2/apiDetail.htm?docType=4&apiId=1049
