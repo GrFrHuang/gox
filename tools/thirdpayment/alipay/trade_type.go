@@ -496,7 +496,7 @@ func (this *AliPayTradePayResponse) IsSuccess() bool {
 //////////////////////////////////////////////////////////////////////////////////
 // https://doc.open.alipay.com/doc2/detail.htm?treeId=204&articleId=105462&docType=1
 type AliPayTradeAppPay struct {
-	NotifyURL string `json:"-"` // 可选
+	NotifyURL string `json:"notify_url"` // 可选
 
 	Body           string `json:"body"`            // 可选 对一笔交易的具体描述信息。如果是多种商品，请将商品描述字符串累加传给body。
 	Subject        string `json:"subject"`         // 必须 商品的标题/交易标题/订单标题/订单关键字等。

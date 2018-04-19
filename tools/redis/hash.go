@@ -13,6 +13,9 @@ import (
 // Get field, value from hash table by table and field name.
 func (redis *Redis) HGet(table, field interface{}) (string, error) {
 	result, err := _redis.String(redis.conn.Do("HGET", table, field))
+	if err == _redis.ErrNil {
+		return "", nil
+	}
 	return result, err
 }
 

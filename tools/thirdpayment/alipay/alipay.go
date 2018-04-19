@@ -1,6 +1,7 @@
 package alipay
 
 import (
+	"fmt"
 	"crypto"
 	"encoding/base64"
 	"encoding/json"
@@ -112,6 +113,7 @@ func (this *AliPay) doRequest(method string, param AliPayParam, results interfac
 	if resp != nil {
 		defer resp.Body.Close()
 	}
+	fmt.Println("=======", resp.Request.URL, resp.Status)
 	if err != nil {
 		return err
 	}
@@ -142,12 +144,10 @@ func (this *AliPay) doRequest(method string, param AliPayParam, results interfac
 			return err
 		}
 	}
-
 	err = json.Unmarshal(data, results)
 	if err != nil {
 		return err
 	}
-
 	return err
 }
 
