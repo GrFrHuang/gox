@@ -104,6 +104,7 @@ func (this *AliPay) doRequest(method string, param AliPayParam, results interfac
 	}
 
 	req, err := http.NewRequest(method, this.apiDomain, buf)
+	fmt.Println(req.URL)
 	if err != nil {
 		return err
 	}

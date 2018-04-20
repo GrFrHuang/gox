@@ -67,8 +67,14 @@ func (redis *Redis) HGetAllByJson(table, obj interface{}) (interface{}, error) {
 }
 
 // Hash table set field.
-func (redis *Redis) HSet() (error) {
-	_, err := redis.conn.Do("HSET")
+func (redis *Redis) HSet(table, field, value interface{}) (error) {
+	_, err := redis.conn.Do("HSET", table, field, value)
+	return err
+}
+
+// Hash table set field if key not exist.
+func (redis *Redis) HSetNx(table, field, value interface{}) (error) {
+	_, err := redis.conn.Do("HSETNX", table, field, value)
 	return err
 }
 
