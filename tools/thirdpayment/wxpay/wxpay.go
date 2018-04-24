@@ -94,6 +94,7 @@ const (
 	TRADE_TYPE_JSAPI  = "JSAPI"
 	TRADE_TYPE_NATIVE = "NATIVE"
 	TRADE_TYPE_APP    = "APP"
+	TRADE_TYPE_MWEB   = "MWEB"
 )
 
 //转账校验
@@ -1310,6 +1311,7 @@ type WXUnifiedorderRequest struct {
 	TimeStart      string   `xml:"time_start,omitempty" sign:"true"`
 	TotalFee       string   `xml:"total_fee,omitempty" sign:"true"`
 	TradeType      string   `xml:"trade_type,omitempty" sign:"true"`
+	SceneInfo      string   `xml:"scene_info,omitempty" sign:"true"` //微信H5支付必填字段
 }
 
 //微信支付:统一下单返回数据
@@ -1328,6 +1330,7 @@ type WXUnifiedorderResponse struct {
 	ReturnMsg  string   `xml:"return_msg,omitempty" sign:"true"`  //返回信息，如非空，为错误原因
 	Sign       string   `xml:"sign,omitempty"  sign:"false"`      //sign=false表示不参与签名
 	TradeType  string   `xml:"trade_type,omitempty" sign:"true"`
+	MwebUrl    string   `xml:"mweb_url,omitempty" sign:"true"` //微信H5支付返回的中间页url
 }
 
 func (this WXUnifiedorderResponse) SignValid() bool {
