@@ -1,7 +1,6 @@
 package alipay
 
 import (
-	"fmt"
 	"crypto"
 	"encoding/base64"
 	"encoding/json"
@@ -104,7 +103,6 @@ func (this *AliPay) doRequest(method string, param AliPayParam, results interfac
 	}
 
 	req, err := http.NewRequest(method, this.apiDomain, buf)
-	fmt.Println(req.URL)
 	if err != nil {
 		return err
 	}
@@ -114,7 +112,6 @@ func (this *AliPay) doRequest(method string, param AliPayParam, results interfac
 	if resp != nil {
 		defer resp.Body.Close()
 	}
-	fmt.Println("=======", resp.Request.URL, resp.Status)
 	if err != nil {
 		return err
 	}
