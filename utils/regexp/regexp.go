@@ -2,13 +2,16 @@ package regexp
 
 import (
 	"regexp"
+	"strings"
+	"strconv"
+	"math"
 )
 
 // Verify mobile phone, most 11 byte length.
 func MobilePhone(str ...string) bool {
 	var yes bool
 	for _, s := range str {
-		yes, _ = regexp.MatchString("^1[0-9]{10}$", s)
+		yes, _ = regexp.MatchString(`^(13[0-9]|15[0-9]|18[0-9]|14[0-9]|17[0-9])\d{8}$`, s)
 		if !yes {
 			return yes
 		}
@@ -122,6 +125,67 @@ func Password(str ...string) bool {
 		}
 	}
 	return yes
+}
+
+// Verify person id card number.
+func VerifyIdCard(idStr string) (bool) {
+	var value [18]float64
+	var i int = 0
+	//权值
+	var verify_num = [17]float64{7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2}
+	//计算出的检验位
+	var verify_code string
+	//加权求和的值
+	var s float64
+	//是否检验通过
+	var end_value string
+
+	IdSlice := strings.SplitN(idStr, "", 18)
+	//转换，用户身份证的最后一位
+	for k, v := range IdSlice {
+		value[k], _ = strconv.ParseFloat(v, 1)
+		end_value = v
+
+	}
+	//计算权值和
+	for i < 17 {
+		s = s + (value[i] * verify_num[i])
+		i++
+	}
+	sum := math.Mod(s, 11)
+	//value := strconv.FormatFloat(y,1,1,1)
+	//no break?
+	switch sum {
+	case 0:
+		verify_code = "1"
+	case 1:
+		verify_code = "0"
+	case 2:
+		verify_code = "X"
+	case 3:
+		verify_code = "9"
+	case 4:
+		verify_code = "8"
+	case 5:
+		verify_code = "7"
+	case 6:
+		verify_code = "6"
+	case 7:
+		verify_code = "5"
+	case 8:
+		verify_code = "4"
+	case 9:
+		verify_code = "3"
+	case 10:
+		verify_code = "2"
+	default:
+		return false
+	}
+	if verify_code != end_value {
+		return false
+	} else {
+		return true
+	}
 }
 
 // Step.1 -- Prevent sql fight.
