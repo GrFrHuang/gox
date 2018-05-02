@@ -2,8 +2,6 @@ package redis
 
 import (
 	_redis "github.com/gomodule/redigo/redis"
-	"encoding/json"
-	"io/ioutil"
 	"github.com/GrFrHuang/gox/log"
 	"time"
 	"strconv"
@@ -33,39 +31,6 @@ type Pool struct {
 	pool _redis.Pool
 }
 
-// Create a redis connect pool target by config.
-func newRedis() *Redis {
-	var econfig *ExtendConfig
-	var config *Config
-	bt, err := ioutil.ReadFile("./config.json")
-	if err != nil {
-		log.Error("[redis]: ", err)
-		return nil
-	}
-	err = json.Unmarshal(bt, &econfig)
-	if err != nil {
-		log.Error("[redis]: ", err)
-		return nil
-	}
-	if econfig.Dev.Valid {
-		config = econfig.Dev
-	} else {
-		config = econfig.Prod
-	}
-	//options := redis.DialOption{
-	//
-	//}
-	connect, err := _redis.Dial(config.Protocol, config.Host+":"+config.Port)
-	if err != nil {
-		log.Error("[redis]: ", err)
-		return nil
-	}
-	log.Info("[redis]: success to connect redis server !")
-	return &Redis{
-		conn: connect,
-	}
-}
-
 func GetRedisConnection(p *Pool) *Redis {
 	return &Redis{
 		conn: p.pool.Get(),
@@ -83,9 +48,6 @@ func NewRedisPoolByConfig(config *Config) *Pool {
 			log.Panic("[redis]: parse connection time out time error ", err)
 		}
 	}
-	//options := redis.DialOption{
-	//
-	//}
 	p := _redis.Pool{
 		MaxIdle:     500,
 		MaxActive:   10000,

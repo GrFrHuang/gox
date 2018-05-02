@@ -4,12 +4,21 @@ import (
 	"testing"
 	"fmt"
 	"strconv"
+	"time"
 )
 
 var conn *Redis
 
 func init() {
-	conn = newRedis()
+	config := Config{
+		Protocol:    "tcp",
+		Host:        "127.0.0.1",
+		Port:        "6379",
+		IsKeepAlive: true,
+		TimeOut:     0,
+	}
+	conn = GetRedisConnection(NewRedisPoolByConfig(&config))
+
 }
 
 func TestRedisKey(t *testing.T) {
@@ -61,6 +70,10 @@ func TestHash(t *testing.T) {
 	//jsonStr := string(bts)
 	//fmt.Println(jsonStr, err)
 	u, err := conn.HGetAllByJson("human", h)
+	time.Sleep(time.Second * 20)
+	defer func() {
+		conn.CloseRedis()
+	}()
 	//var s string
 	//err := json.Unmarshal([]byte("hello world"), &s)
 

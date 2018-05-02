@@ -16,6 +16,6 @@ func TestOnceMD5(t *testing.T) {
 	//	Age:  24,
 	//}
 	//res, err := OnceMD5(s)
-	res, err := OnceMD5("game_key=123123&secret_key=1231231&amount=0.01")
+	res, err := OnceMD5(" game_key=aobohudong&secret_key=aobohudong&amount=0.01&order_no=1524652698666")
 	log.Debug(res, err)
 }
