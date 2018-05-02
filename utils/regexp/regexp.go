@@ -123,3 +123,11 @@ func Password(str ...string) bool {
 	}
 	return yes
 }
+
+// Step.1 -- Prevent sql fight.
+// Step.2 -- Variable type conversion.
+// Step.3 -- Don't return the sql native error.
+// Step.4 -- Give the DB user minimal executive authority.
+func SqlFilter() {
+
+}
