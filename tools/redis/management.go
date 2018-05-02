@@ -13,6 +13,12 @@ func (redis *Redis) Ping() (bool, error) {
 	return false, err
 }
 
+// Check redis current info.
+func (redis *Redis) INFO() (string, error) {
+	result, err := _redis.String(redis.conn.Do("INFO"))
+	return result, err
+}
+
 // Persistent redis data for safety.
 // This command creates the dump.rdb file in the redis-cli script current directory.
 func (redis *Redis) Save() (error) {
