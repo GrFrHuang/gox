@@ -145,7 +145,6 @@ func VerifyIdCard(idStr string) (bool) {
 	for k, v := range IdSlice {
 		value[k], _ = strconv.ParseFloat(v, 1)
 		end_value = v
-
 	}
 	//计算权值和
 	for i < 17 {
@@ -188,10 +187,11 @@ func VerifyIdCard(idStr string) (bool) {
 	}
 }
 
-// Step.1 -- Prevent sql fight.
-// Step.2 -- Variable type conversion.
-// Step.3 -- Don't return the sql native error.
-// Step.4 -- Give the DB user minimal executive authority.
+// Step.1 -- Regexp filter sql variable(Change all single quotes in single appear to two single quotes).
+// Step.2 -- Delete all hyphens in the user's input.
+// Step.3 -- Variable type conversion.
+// Step.4 -- Don't return the sql native error.
+// Step.5 -- Give the DB user minimal executive authority.
 func SqlFilter() {
 
 }

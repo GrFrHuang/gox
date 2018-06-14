@@ -6,8 +6,6 @@ package redis
 
 import (
 	_redis "github.com/gomodule/redigo/redis"
-	"github.com/GrFrHuang/gox/log"
-	"encoding/json"
 )
 
 // Get field, value from hash table by table and field name.
@@ -19,7 +17,7 @@ func (redis *Redis) HGet(table, field interface{}) (string, error) {
 	return result, err
 }
 
-// Get all value by field list.
+// Get all values by field list.
 func (redis *Redis) HmGet(table interface{}, field ... interface{}) ([]string, error) {
 	array := make([]interface{}, 1)
 	array[0] = table
@@ -34,45 +32,13 @@ func (redis *Redis) HGetAll(table interface{}) ([]string, error) {
 	return results, err
 }
 
-// Get all fields, values from hash table, return json object.
-func (redis *Redis) HGetAllByJson(table, obj interface{}) (interface{}, error) {
-	results, err := _redis.Strings(redis.conn.Do("HGETALL", table))
-	if err != nil {
-		log.Error(err)
-		return nil, err
-	}
-	keyValues := ""
-	jsonStr := ""
-	for k, v := range results {
-		if k%2 == 0 {
-			keyValues += `"` + v + `":`
-			continue
-		}
-		if k == len(results)-1 {
-			keyValues += v
-			continue
-		}
-		keyValues += `"` + v + `"` + ","
-	}
-	jsonStr = "{" + keyValues + "}"
-
-	bts, err := json.Marshal(jsonStr)
-	if err != nil {
-		log.Error(err)
-		return nil, err
-	}
-	err = json.Unmarshal(bts, &obj)
-
-	return obj, err
-}
-
-// Hash table set field.
+// Hash table set field and value.
 func (redis *Redis) HSet(table, field, value interface{}) (error) {
 	_, err := redis.conn.Do("HSET", table, field, value)
 	return err
 }
 
-// Hash table set field if key not exist.
+// Hash table set field and value if key not exist.
 func (redis *Redis) HSetNx(table, field, value interface{}) (error) {
 	_, err := redis.conn.Do("HSETNX", table, field, value)
 	return err
@@ -99,6 +65,13 @@ func (redis *Redis) HKeys(table interface{}) ([]string, error) {
 	return results, err
 }
 
+// Get all values from hash table, not need fields.
+func (redis *Redis) HVals(table interface{}) ([]string, error) {
+	results, err := _redis.Strings(redis.conn.Do("HVALS", table))
+	return results, err
+}
+
+// Check field whether exist or not.
 func (redis *Redis) HExists(table, field interface{}) (bool, error) {
 	results, err := _redis.Int(redis.conn.Do("HKEYS", table))
 	if results != 0 && err == nil {

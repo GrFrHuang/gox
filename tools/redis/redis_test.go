@@ -4,7 +4,6 @@ import (
 	"testing"
 	"fmt"
 	"strconv"
-	"time"
 )
 
 var conn *Redis
@@ -18,7 +17,6 @@ func init() {
 		TimeOut:     0,
 	}
 	conn = GetRedisConnection(NewRedisPoolByConfig(&config))
-
 }
 
 func TestRedisKey(t *testing.T) {
@@ -52,31 +50,11 @@ func TestRedisString(t *testing.T) {
 	fmt.Println(err)
 }
 
-type Human struct {
-	Sex  string `json:"sex"`
-	User Us     `json:"user"`
-}
-
-type Us struct {
-	Name string `json:"name"`
-	Age  int    `json:"age"`
-}
-
 func TestHash(t *testing.T) {
-	h := Human{}
-	//user.Name = "huang"
-	//user.Age = 24
-	//bts, err := json.Marshal(user)
-	//jsonStr := string(bts)
-	//fmt.Println(jsonStr, err)
-	u, err := conn.HGetAllByJson("human", h)
-	time.Sleep(time.Second * 20)
+	u, err := conn.HVals("human")
 	defer func() {
 		conn.CloseRedis()
 	}()
-	//var s string
-	//err := json.Unmarshal([]byte("hello world"), &s)
-
 	fmt.Println(err, u)
 }
 
@@ -93,6 +71,17 @@ func TestList(t *testing.T) {
 	fmt.Println(len, err)
 }
 
+func TestMember(t *testing.T) {
+	fmt.Println(conn.SisMember("hehe", "GrFrHuang"))
+}
+
 func TestManage(t *testing.T) {
 	conn.Ping()
+}
+
+func BenchmarkList(b *testing.B) {
+	for i := 0; i < b.N; i++ { //use b.N for looping
+		//err := conn.LPush("list2", "hello", "world", "hi", "GrFrHuang")
+		fmt.Println(i)
+	}
 }

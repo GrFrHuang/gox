@@ -26,6 +26,18 @@ func (redis *Redis) SAdd(set interface{}, member ...interface{}) (error) {
 	return err
 }
 
+// Check a member element whether is a member of a collection (set).
+func (redis *Redis) SisMember(set, member interface{}) (bool, error) {
+	num, err := _redis.Int(redis.conn.Do("SISMEMBER", set, member))
+	if num != 0 {
+		return true, nil
+	}
+	if err == _redis.ErrNil {
+		return false, nil
+	}
+	return false, err
+}
+
 // Get all fields, values from hash table by table name.
 func (redis *Redis) SMembers(set interface{}, member ...interface{}) ([]string, error) {
 	results, err := _redis.Strings(redis.conn.Do("SMEMBERS", set))

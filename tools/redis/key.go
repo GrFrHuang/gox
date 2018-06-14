@@ -12,19 +12,29 @@ const (
 // Get Value by key string.
 func (redis *Redis) Get(key interface{}) (string, error) {
 	result, err := _redis.String(redis.conn.Do("GET", key))
+	if result != "" {
+		return result, nil
+	}
 	if err == _redis.ErrNil {
 		return "", nil
 	}
-	return result, err
+	return "", err
 }
 
 // Get key list by regular expression.
 func (redis *Redis) KeysByRegexp(pattern string) ([]string, error) {
-	result, err := _redis.Strings(redis.conn.Do("KEYS", pattern))
-	return result, err
+	results, err := _redis.Strings(redis.conn.Do("KEYS", pattern))
+	if len(results) > 0 {
+		return results, nil
+	}
+	if err == _redis.ErrNil {
+		return nil, nil
+	}
+	return nil, err
 }
 
-// Set a key-value in redis server by specify expire type and time.
+// Set a key-value in redis server by specify expire type and time,
+// The expireType enum are EX and PX.
 func (redis *Redis) Set(key, value interface{}, expireTime int, expireType string) (error) {
 	var args []interface{}
 	args = append(args, key, value)
