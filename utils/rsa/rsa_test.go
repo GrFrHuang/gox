@@ -1,6 +1,8 @@
 package encoding
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestRSAEncrypt(t *testing.T) {
 
