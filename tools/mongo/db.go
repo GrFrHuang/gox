@@ -10,61 +10,53 @@
 
 // Bson(Binary Json) is Json's extends data format for mongoDB.
 
-package main
+package mongo
 
 import (
 	"gopkg.in/mgo.v2"
-	"time"
 	"github.com/GrFrHuang/gox/log"
+	"time"
 	"strconv"
-	"github.com/Unknwon/goconfig"
 )
 
 var session *mgo.Session
-var Database *mgo.Database
+var err error
 
-// todo 重试机制的方法
-func main() {
-	configFile, err := goconfig.LoadConfigFile("./gorm/mongo/config.ini")
+type Config struct {
+	Host           string
+	Port           string
+	Direct         string // 主节点发生故障时, 是否与集群中其他被选举的节点建立连接
+	Timeout        string
+	Username       string
+	Password       string
+	MaxConnections string // Session.SetPoolLimit
+	Database       string
+}
+
+func Init(config *Config) {
+	timeout, err := time.ParseDuration(config.Timeout)
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
-	runMode, err := configFile.GetValue("currentEnv", "mode")
+	maxConnections, err := strconv.Atoi(config.MaxConnections)
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
-	var conf map[string]string
-	if runMode == "dev" {
-		conf, err = configFile.GetSection("dev")
-	} else {
-		conf, err = configFile.GetSection("prod")
-	}
+	isDirect, err := strconv.ParseBool(config.Direct)
 	if err != nil {
-		panic(err)
-	}
-	direct, err := strconv.ParseBool(conf["direct"])
-	if err != nil {
-		log.Error(err)
-	}
-	maxConnections, err := strconv.Atoi(conf["maxConnections"])
-	if err != nil {
-		log.Error(err)
-	}
-	timeout, err := time.ParseDuration(conf["timeout"])
-	if err != nil {
-		log.Error(err)
+		log.Panic(err)
 	}
 	dialInfo := &mgo.DialInfo{
-		Addrs:     []string{conf["host"] + ":" + conf["port"]},
-		Direct:    direct,
+		Addrs:     []string{config.Host + ":" + config.Port},
+		Direct:    isDirect,
 		Timeout:   timeout,
-		Username:  conf["username"],
-		Password:  conf["password"],
-		PoolLimit: maxConnections, // Session.SetPoolLimit
-		Database:  conf["dbName"],
+		Username:  config.Username,
+		Password:  config.Password,
+		PoolLimit: maxConnections,
+		Database:  config.Database,
 	}
 	// Create a tcp socket pool and gain it's session.
-	session, err := mgo.DialWithInfo(dialInfo)
+	session, err = mgo.DialWithInfo(dialInfo)
 	if err != nil {
 		log.Panic("[mongdb] ", err)
 	}
