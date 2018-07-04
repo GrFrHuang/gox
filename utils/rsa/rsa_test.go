@@ -2,12 +2,16 @@ package encoding
 
 import (
 	"testing"
+	"fmt"
 )
 
-func TestRSAEncrypt(t *testing.T) {
-
+func init() {
+	InitKey("", "")
 }
 
-func TestRSADecrypt(t *testing.T) {
-
+func TestRSAEncryptAndDecrypt(t *testing.T) {
+	cipher, err := RsaEncrypt([]byte("hello world!"))
+	fmt.Println(string(cipher), err)
+	plain, err := RsaDecrypt(cipher)
+	fmt.Println(string(plain), err)
 }

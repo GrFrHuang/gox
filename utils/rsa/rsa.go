@@ -7,96 +7,70 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
+	"io/ioutil"
+	"os"
 )
 
-func packageData(originalData []byte, packageSize int) (r [][]byte) {
-	var src = make([]byte, len(originalData))
-	copy(src, originalData)
+var (
+	publicKey  []byte
+	privateKey []byte
+)
 
-	r = make([][]byte, 0)
-	if len(src) <= packageSize {
-		return append(r, src)
+// Initialize public and private key.
+func InitKey(pubPemPath, priPemPath string) (error) {
+	pubKey, err := ioutil.ReadFile(pubPemPath)
+	if err != nil {
+		os.Exit(-1)
 	}
-	for len(src) > 0 {
-		var p = src[:packageSize]
-		r = append(r, p)
-		src = src[packageSize:]
-		if len(src) <= packageSize {
-			r = append(r, src)
-			break
-		}
+	priKey, err := ioutil.ReadFile(priPemPath)
+	if err != nil {
+		os.Exit(-1)
 	}
-	return r
+	publicKey = pubKey
+	privateKey = priKey
+	return err
 }
 
-func RSAEncrypt(plaintext, key []byte) ([]byte, error) {
-	var err error
-	var block *pem.Block
-	block, _ = pem.Decode(key)
+// Encrypt plain text by public key, default way is PKCS#1 v1.5.
+func RsaEncrypt(plainText []byte) ([]byte, error) {
+	block, _ := pem.Decode(publicKey)
 	if block == nil {
 		return nil, errors.New("public key error")
 	}
-
-	var pubInterface interface{}
-	pubInterface, err = x509.ParsePKIXPublicKey(block.Bytes)
+	pubInterface, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
 		return nil, err
 	}
-	var pub = pubInterface.(*rsa.PublicKey)
-
-	var data = packageData(plaintext, pub.N.BitLen()/8-11)
-	var cipherData []byte = make([]byte, 0, 0)
-
-	for _, d := range data {
-		var c, e = rsa.EncryptPKCS1v15(rand.Reader, pub, d)
-		if e != nil {
-			return nil, e
-		}
-		cipherData = append(cipherData, c...)
-	}
-
-	return cipherData, nil
+	pub := pubInterface.(*rsa.PublicKey)
+	cipherData, err := rsa.EncryptPKCS1v15(rand.Reader, pub, plainText)
+	return cipherData, err
 }
 
-func RSADecrypt(ciphertext, key []byte) ([]byte, error) {
-	var err error
-	var block *pem.Block
-	block, _ = pem.Decode(key)
+// Decrypt cipher text by private key, default way is PKCS#1 v1.5.
+func RsaDecrypt(cipherText []byte) ([]byte, error) {
+	block, _ := pem.Decode(privateKey)
 	if block == nil {
 		return nil, errors.New("private key error")
 	}
-
-	var pri *rsa.PrivateKey
-	pri, err = x509.ParsePKCS1PrivateKey(block.Bytes)
+	pri, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 	if err != nil {
 		return nil, err
 	}
-
-	var data = packageData(ciphertext, pri.PublicKey.N.BitLen()/8)
-	var plainData []byte = make([]byte, 0, 0)
-
-	for _, d := range data {
-		var p, e = rsa.DecryptPKCS1v15(rand.Reader, pri, d)
-		if e != nil {
-			return nil, e
-		}
-		plainData = append(plainData, p...)
-	}
-	return plainData, nil
+	plainText, err := rsa.DecryptPKCS1v15(rand.Reader, pri, cipherText)
+	return plainText, err
 }
 
-func SignPKCS1v15(src, key []byte, hash crypto.Hash) ([]byte, error) {
+// Sign for md5 data.
+func SignPKCS1v15(src, privateKey []byte, hash crypto.Hash) ([]byte, error) {
 	var h = hash.New()
 	h.Write(src)
 	var hashed = h.Sum(nil)
-
 	var err error
 	var block *pem.Block
-	block, _ = pem.Decode(key)
+	block, _ = pem.Decode(privateKey)
 	if block == nil {
 		return nil, errors.New("private key error")
 	}
-
 	var pri *rsa.PrivateKey
 	pri, err = x509.ParsePKCS1PrivateKey(block.Bytes)
 	if err != nil {
@@ -105,24 +79,21 @@ func SignPKCS1v15(src, key []byte, hash crypto.Hash) ([]byte, error) {
 	return rsa.SignPKCS1v15(rand.Reader, pri, hash, hashed)
 }
 
-func VerifyPKCS1v15(src, sig, key []byte, hash crypto.Hash) error {
+func VerifyPKCS1v15(src, sig, publicKey []byte, hash crypto.Hash) error {
 	var h = hash.New()
 	h.Write(src)
 	var hashed = h.Sum(nil)
-
 	var err error
 	var block *pem.Block
-	block, _ = pem.Decode(key)
+	block, _ = pem.Decode(publicKey)
 	if block == nil {
 		return errors.New("public key error")
 	}
-
 	var pubInterface interface{}
 	pubInterface, err = x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
 		return err
 	}
 	var pub = pubInterface.(*rsa.PublicKey)
-
 	return rsa.VerifyPKCS1v15(pub, hash, hashed, sig)
 }

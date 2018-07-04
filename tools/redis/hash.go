@@ -8,6 +8,9 @@ import (
 	_redis "github.com/gomodule/redigo/redis"
 )
 
+// map[field]value
+type HmSetBean map[interface{}]interface{}
+
 // Get field, value from hash table by table and field name.
 func (redis *Redis) HGet(table, field interface{}) (string, error) {
 	result, err := _redis.String(redis.conn.Do("HGET", table, field))
@@ -45,8 +48,14 @@ func (redis *Redis) HSetNx(table, field, value interface{}) (error) {
 }
 
 // Hash table set multiple fields and values.
-func (redis *Redis) HmSet() (error) {
-	_, err := redis.conn.Do("HMSET")
+func (redis *Redis) HmSet(table interface{}, beans []HmSetBean) (error) {
+	var params = []interface{}{table}
+	for _, bean := range beans {
+		for k, v := range bean {
+			params = append(params, k, v)
+		}
+	}
+	_, err := redis.conn.Do("HMSET", params...)
 	return err
 }
 
