@@ -14,13 +14,24 @@ package mongo
 
 import (
 	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 	"github.com/GrFrHuang/gox/log"
 	"time"
 	"strconv"
+	"reflect"
+	"strings"
+	"errors"
 )
 
-var session *mgo.Session
-var err error
+var (
+	engine = new(Engine)
+	err    error
+)
+
+var (
+	ErrNotFound = mgo.ErrNotFound
+	ErrCursor   = mgo.ErrCursor
+)
 
 type Config struct {
 	Host           string
@@ -31,6 +42,10 @@ type Config struct {
 	Password       string
 	MaxConnections string // Session.SetPoolLimit
 	Database       string
+}
+
+type Engine struct {
+	*mgo.Session
 }
 
 func Init(config *Config) {
@@ -56,22 +71,60 @@ func Init(config *Config) {
 		Database:  config.Database,
 	}
 	// Create a tcp socket pool and gain it's session.
-	session, err = mgo.DialWithInfo(dialInfo)
+	engine.Session, err = mgo.DialWithInfo(dialInfo)
 	if err != nil {
 		log.Panic("[mongdb] ", err)
 	}
-	session.SetMode(mgo.Monotonic, true)
+	engine.Session.SetMode(mgo.Monotonic, true)
+	//	Print sql expression.
+	mgo.SetDebug(true)
 }
 
-func GetSession() *mgo.Session {
-	return session.Clone()
+func GetEngine() *Engine {
+	err = engine.Session.Ping()
+	if err != nil {
+		log.Panic("[mongdb] ", err)
+	}
+	return &Engine{
+		Session: engine.Session.Clone(),
+	}
 }
 
 // Get default database by config file.
-func GetDefaultDatabase() *mgo.Database {
-	return session.DB("")
+func (e *Engine) GetDefaultDatabase() *mgo.Database {
+	return e.Session.DB("")
 }
 
-func GetDatabase(database string) *mgo.Database {
-	return session.DB(database)
+func (e *Engine) GetDatabase(database string) *mgo.Database {
+	return e.Session.DB(database)
+}
+
+func NewBsonFromJson(v interface{}) (bson.M, error) {
+	var value = reflect.ValueOf(v)
+	var elem = value.Type().Elem()
+	var doc = bson.M{}
+	var err error
+	if elem.Kind() != reflect.Struct {
+		err = errors.New("Type not is reflect.Struct ! ")
+		log.Error(err)
+		return nil, err
+	}
+	// Protobuf object have three fields.
+	if elem.NumField() <= 3 {
+		err = errors.New("The lack of Field ! ")
+		log.Error(err)
+		return nil, err
+	}
+	for i := 0; i < elem.NumField(); i++ {
+		jsonTag := elem.Field(i).Tag.Get("json")
+		array := strings.Split(jsonTag, ",")
+		if strings.ToLower(array[0]) == "id" || strings.ToLower(elem.Field(i).Name) == "id" {
+			doc["_id"] = value.Elem().Field(i).Interface()
+			continue
+		}
+		if array[0] != "-" {
+			doc[array[0]] = value.Elem().Field(i).Interface()
+		}
+	}
+	return doc, nil
 }
