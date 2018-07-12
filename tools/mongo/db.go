@@ -21,6 +21,7 @@ import (
 	"reflect"
 	"strings"
 	"errors"
+	"encoding/json"
 )
 
 var (
@@ -99,7 +100,7 @@ func (e *Engine) GetDatabase(database string) *mgo.Database {
 	return e.Session.DB(database)
 }
 
-func NewBsonFromJson(v interface{}) (bson.M, error) {
+func NewBsonFromJson(v interface{}, ignoreFields ... string) (bson.M, error) {
 	var value = reflect.ValueOf(v)
 	var elem = value.Type().Elem()
 	var doc = bson.M{}
@@ -109,22 +110,50 @@ func NewBsonFromJson(v interface{}) (bson.M, error) {
 		log.Error(err)
 		return nil, err
 	}
-	// Protobuf object have three fields.
+	// Protobuf object have three fields always.
 	if elem.NumField() <= 3 {
 		err = errors.New("The lack of Field ! ")
 		log.Error(err)
 		return nil, err
 	}
+	m := make(map[string]bool)
+	for _, v := range ignoreFields {
+		m[v] = true
+	}
 	for i := 0; i < elem.NumField(); i++ {
 		jsonTag := elem.Field(i).Tag.Get("json")
 		array := strings.Split(jsonTag, ",")
 		if strings.ToLower(array[0]) == "id" || strings.ToLower(elem.Field(i).Name) == "id" {
+			// Change the field id to _id.
 			doc["_id"] = value.Elem().Field(i).Interface()
 			continue
 		}
-		if array[0] != "-" {
+		if array[0] != "-" || !m[array[0]] {
 			doc[array[0]] = value.Elem().Field(i).Interface()
 		}
 	}
 	return doc, nil
+}
+
+func NewJsonFromBson(m bson.M, v interface{}, ignoreFields ... string) (error) {
+	var null interface{}
+	if len(ignoreFields) > 0 {
+		for _, v := range ignoreFields {
+			m[v] = null
+		}
+	}
+	// Change the field _id to id.
+	if v, ok := m["_id"]; ok {
+		m["id"] = v
+		delete(m, "_id")
+	}
+	bts, err := json.Marshal(m)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(bts, &v)
+	if err != nil {
+		return err
+	}
+	return nil
 }

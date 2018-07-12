@@ -16,7 +16,7 @@ func init() {
 		IsKeepAlive: true,
 		TimeOut:     0,
 	}
-	conn = GetRedisConnection(NewRedisPoolByConfig(&config))
+	conn = NewRedisPoolByConfig(&config).GetRedisConnection()
 }
 
 func TestRedisKey(t *testing.T) {

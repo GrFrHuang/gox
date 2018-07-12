@@ -31,7 +31,7 @@ type Pool struct {
 	pool _redis.Pool
 }
 
-func GetRedisConnection(p *Pool) *Redis {
+func (p *Pool) GetRedisConnection() *Redis {
 	return &Redis{
 		conn: p.pool.Get(),
 	}

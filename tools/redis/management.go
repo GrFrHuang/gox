@@ -2,6 +2,7 @@ package redis
 
 import (
 	_redis "github.com/gomodule/redigo/redis"
+	"github.com/GrFrHuang/gox/log"
 )
 
 // Ping to redis server.
@@ -35,6 +36,9 @@ func (redis *Redis) BgSave() (error) {
 // Close redis connection.
 func (redis *Redis) CloseRedis() (error) {
 	err := redis.conn.Close()
+	if err != nil {
+		log.Error(err)
+	}
 	return err
 }
 
