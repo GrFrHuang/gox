@@ -9,6 +9,8 @@
 //	4. The message arrives in the queue and waits to be processed by the message receiver
 //	5. The message receiver processes the message
 
+// RabbitMQ provide a default exchange machine for queue, the mode default is direct.
+
 package rabbitmq
 
 import (
@@ -17,13 +19,16 @@ import (
 	"errors"
 	"time"
 	"bytes"
+	"sync"
 )
 
 type RabbitMQ struct {
-	Error   chan error
-	TimeOut chan int
-	Url     string
-	Conn    *amqp.Connection
+	Error       chan error
+	Timeout     chan int
+	TimeoutPool map[int][]byte
+	Url         string
+	rw          *sync.RWMutex
+	Conn        *amqp.Connection
 }
 
 type Handler func(amqp.Delivery) error
@@ -38,17 +43,20 @@ func NewRabbit(url string) (*RabbitMQ, error) {
 	if err != nil {
 		return nil, err
 	}
+	time.Sleep(time.Second * 1)
 	log.Info("[RabbitMQ] success to connect server: ", url)
 	return &RabbitMQ{
-		Error:   make(chan error),
-		TimeOut: make(chan int),
-		Url:     url,
-		Conn:    conn,
+		Error:       make(chan error),
+		Timeout:     make(chan int),
+		TimeoutPool: make(map[int][]byte),
+		Url:         url,
+		rw:          &sync.RWMutex{},
+		Conn:        conn,
 	}, nil
 }
 
 // As a producer publish the message from RabbitMQ server node.
-func (r *RabbitMQ) Publish(exchange, queue string, body []byte) (error) {
+func (r *RabbitMQ) Publish(exchange, queue string, body []byte, headers map[string]interface{}) (error) {
 	if queue == "" || body == nil {
 		return errors.New("[RabbitMQ] param not correct")
 	}
@@ -64,13 +72,13 @@ func (r *RabbitMQ) Publish(exchange, queue string, body []byte) (error) {
 		}
 	}()
 	// Declare the channel's exchange machine.
-	err = channel.ExchangeDeclare(exchange, "topic", false, false, false, true, nil)
+	err = channel.ExchangeDeclare(exchange, "topic", true, false, false, false, nil)
 	if err != nil {
 		return err
 	}
 	q, err := channel.QueueDeclare(
 		queue, // message queue name
-		false, // durable
+		true,  // durable
 		false, // delete when unused
 		false, // exclusive, if connection disconnect, delete queue or not
 		false, // no-wait
@@ -84,12 +92,19 @@ func (r *RabbitMQ) Publish(exchange, queue string, body []byte) (error) {
 	if err != nil {
 		return err
 	}
+	h := make(amqp.Table)
+	if len(headers) > 0 {
+		for k, v := range headers {
+			h[k] = v
+		}
+	}
 	err = channel.Publish(
-		"",     // exchange 默认模式，exchange为空
-		q.Name, // routing key 默认模式路由到同名队列，即是传入的queue
-		false,  // mandatory
+		exchange, // exchange  默认模式下，exchange为空
+		routeKey, // routing key 默认模式路由到同名队列，即是传入的queue name
+		false,    // mandatory
 		false,
 		amqp.Publishing{
+			Headers: h,
 			// persistence, because the queue is declared lasting, news must add this (probably not),
 			// but the message or may be lost, such as message to the cache but MQ hang up too late to persistence.
 			//DeliveryMode: amqp.Persistent,
@@ -102,61 +117,64 @@ func (r *RabbitMQ) Publish(exchange, queue string, body []byte) (error) {
 
 // As a consumer receive the message from RabbitMQ server node.
 func (r *RabbitMQ) Receive(exchange, queue string, handler Handler) (error) {
+	var err error
 	if queue == "" || exchange == "" {
 		return errors.New("[RabbitMQ] param not correct")
 	}
-	channel, err := r.Conn.Channel()
-	if err != nil {
-		return err
-	}
-	defer func() {
-		_err := channel.Close()
-		if _err != nil {
-			log.Error(_err)
-		}
-	}()
-	// exchange有4个类型：direct\topic\fanout\header。
-	err = channel.ExchangeDeclare(exchange, "topic", true, false, false, true, nil)
-	if err != nil {
-		return err
-	}
-	q, err := channel.QueueDeclare(
-		queue,
-		true,
-		false,
-		false,
-		true,
-		nil,
-	)
-	if err != nil {
-		return err
-	}
-	routeKey := exchange + "." + q.Name
-	err = channel.QueueBind(q.Name, routeKey, exchange, true, nil)
-	if err != nil {
-		return err
-	}
-	messages, err := channel.Consume(q.Name, "", true, false, false, false, nil)
-	if err != nil {
-		return err
-	}
-	forever := make(chan bool)
-	// Messages is goroutine safe.
-	go func() {
-		for msg := range messages {
-			err := handler(msg)
+	go func(_exchange, _queue string, _handler Handler) {
+		for {
+			channel, err := r.Conn.Channel()
 			if err != nil {
 				log.Error(err)
+				return
 			}
-			// Confirm receive this msg, multiple must be false.
-			err = msg.Ack(false)
+			// exchange有4个类型：direct\topic\fanout\header。
+			err = channel.ExchangeDeclare(_exchange, "topic", true, false, false, false, nil)
 			if err != nil {
 				log.Error(err)
+				return
 			}
+			q, err := channel.QueueDeclare(
+				_queue,
+				true,
+				false,
+				false,
+				false,
+				nil,
+			)
+			if err != nil {
+				log.Error(err)
+				return
+			}
+			routeKey := exchange + "." + q.Name
+			err = channel.QueueBind(q.Name, routeKey, _exchange, true, nil)
+			if err != nil {
+				log.Error(err)
+				return
+			}
+			// noack="no manual acks"=autoack
+			// Messages is goroutine safe.
+			messages, err := channel.Consume(q.Name, "consumer_tag1", false, false, false, true, nil)
+			if err != nil {
+				log.Error(err)
+				return
+			}
+			for msg := range messages {
+				err := _handler(msg)
+				if err != nil {
+					log.Error(err)
+				}
+				// Confirm receive this msg, multiple must be false.
+				err = msg.Ack(false)
+				if err != nil {
+					log.Error(err)
+				}
+			}
+			channel.Close()
+			time.Sleep(time.Second * 1)
 		}
-	}()
-	<-forever
-	return nil
+	}(exchange, queue, handler)
+	return err
 }
 
 // Get RabbitMQ server node's url.
@@ -209,22 +227,52 @@ func (r *RabbitMQ) Ping() (err error) {
 	return err
 }
 
-func (r *RabbitMQ) ListenMessageTimeOut(routeKey string, id int, body []byte, duration time.Duration) () {
-	ticker := time.NewTicker(duration)
+// Add need listen timeout's object in pool.
+func (r *RabbitMQ) RegisterTimeoutPool(id int, content []byte) {
+	r.rw.Lock()
+	defer r.rw.Unlock()
+	r.TimeoutPool[id] = content
+}
+
+func (r *RabbitMQ) ListenMessageTimeOut(queue, exchange string, id int, timeout time.Duration) () {
+	ticker := time.NewTicker(timeout)
 	go func(rabbit *RabbitMQ) {
 		for range ticker.C {
 			ch, err := rabbit.Conn.Channel()
 			if err != nil {
-				log.Error(err)
 				r.Error <- err
 			}
-			msgs, ok, err := ch.Get(routeKey, true)
+			q, err := ch.QueueDeclare(
+				queue,
+				true,
+				false,
+				false,
+				true,
+				nil,
+			)
+			if err != nil {
+				r.Error <- err
+			}
+			routeKey := exchange + "." + queue
+			err = ch.QueueBind(q.Name, routeKey, exchange, true, nil)
+			if err != nil {
+				r.Error <- err
+			}
+			msg, ok, err := ch.Get(routeKey, true)
 			if err != nil || !ok {
 				log.Error("error: ", err)
 				r.Error <- err
 			}
-			if bytes.Equal(msgs.Body, body) {
-				r.TimeOut <- id
+			if _, ok := r.TimeoutPool[id]; !ok {
+				err = errors.New("Forget register listener ? ")
+				r.Error <- err
+			}
+			if bytes.Equal(msg.Body, r.TimeoutPool[id]) {
+				r.Timeout <- id
+			}
+			err = msg.Ack(false)
+			if err != nil {
+				r.Error <- err
 			}
 		}
 	}(r)

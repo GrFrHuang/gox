@@ -128,7 +128,7 @@ func NewBsonFromJson(v interface{}, ignoreFields ... string) (bson.M, error) {
 			doc["_id"] = value.Elem().Field(i).Interface()
 			continue
 		}
-		if array[0] != "-" || !m[array[0]] {
+		if array[0] != "-" && !m[array[0]] {
 			doc[array[0]] = value.Elem().Field(i).Interface()
 		}
 	}
