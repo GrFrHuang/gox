@@ -16,3 +16,7 @@ func TestMobilePhone(t *testing.T) {
 func TestTellPhone(t *testing.T) {
 	fmt.Println(TellPhone("11011011"))
 }
+
+func TestChinese(t *testing.T) {
+	fmt.Println(Chinese("你好吗"))
+}
