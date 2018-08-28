@@ -10,7 +10,7 @@
 //	5. The message receiver processes the message
 
 // RabbitMQ provide a default exchange machine for queue, the mode default is direct.
-
+// todo how to judge timeout from unack msg ?
 package rabbitmq
 
 import (
@@ -18,17 +18,14 @@ import (
 	"github.com/GrFrHuang/gox/log"
 	"errors"
 	"time"
-	"bytes"
-	"sync"
 )
 
 type RabbitMQ struct {
-	Error       chan error
-	Timeout     chan int
-	TimeoutPool map[int][]byte
-	Url         string
-	rw          *sync.RWMutex
-	Conn        *amqp.Connection
+	options        amqp.Table
+	timeoutMessage chan interface{} // use the DLX(dead-letter-exchange) to make a timeout pool
+	timeout        int32            // second
+	url            string
+	conn           *amqp.Connection
 }
 
 type Handler func(amqp.Delivery) error
@@ -43,25 +40,23 @@ func NewRabbit(url string) (*RabbitMQ, error) {
 	if err != nil {
 		return nil, err
 	}
-	time.Sleep(time.Second * 1)
 	log.Info("[RabbitMQ] success to connect server: ", url)
 	return &RabbitMQ{
-		Error:       make(chan error),
-		Timeout:     make(chan int),
-		TimeoutPool: make(map[int][]byte),
-		Url:         url,
-		rw:          &sync.RWMutex{},
-		Conn:        conn,
+		options:        make(amqp.Table),
+		timeoutMessage: make(chan interface{}),
+		timeout:        0,
+		url:            url,
+		conn:           conn,
 	}, nil
 }
 
 // As a producer publish the message from RabbitMQ server node.
-func (r *RabbitMQ) Publish(exchange, queue string, body []byte, headers map[string]interface{}) (error) {
+func (r *RabbitMQ) Publish(exchange, queue string, body []byte, headers map[string]interface{}, timeout int32) (error) {
 	if queue == "" || body == nil {
 		return errors.New("[RabbitMQ] param not correct")
 	}
 	// Create a channel like a concurrent multithreading mode.
-	channel, err := r.Conn.Channel()
+	channel, err := r.conn.Channel()
 	if err != nil {
 		return err
 	}
@@ -76,13 +71,20 @@ func (r *RabbitMQ) Publish(exchange, queue string, body []byte, headers map[stri
 	if err != nil {
 		return err
 	}
+	if timeout > 0 {
+		r.timeout = timeout
+		err = r.SetTimeout(exchange, channel)
+		if err != nil {
+			return err
+		}
+	}
 	q, err := channel.QueueDeclare(
-		queue, // message queue name
-		true,  // durable
-		false, // delete when unused
-		false, // exclusive, if connection disconnect, delete queue or not
-		false, // no-wait
-		nil,   // arguments
+		queue,     // message queue name
+		true,      // durable
+		false,     // delete when unused
+		false,     // exclusive, if connection disconnect, delete queue or not
+		false,     // no-wait
+		r.options, // arguments
 	)
 	if err != nil {
 		return err
@@ -123,7 +125,7 @@ func (r *RabbitMQ) Receive(exchange, queue string, handler Handler) (error) {
 	}
 	go func(_exchange, _queue string, _handler Handler) {
 		for {
-			channel, err := r.Conn.Channel()
+			channel, err := r.conn.Channel()
 			if err != nil {
 				log.Error(err)
 				return
@@ -140,7 +142,7 @@ func (r *RabbitMQ) Receive(exchange, queue string, handler Handler) (error) {
 				false,
 				false,
 				false,
-				nil,
+				r.options,
 			)
 			if err != nil {
 				log.Error(err)
@@ -152,6 +154,11 @@ func (r *RabbitMQ) Receive(exchange, queue string, handler Handler) (error) {
 				log.Error(err)
 				return
 			}
+			//for i := 0; i < 10; i++ {
+			//	msg, ok, err := channel.Get(q.Name, true)
+			//	log.Info(msg.Body, ok, err)
+			//}
+			//return
 			// noack="no manual acks"=autoack
 			// Messages is goroutine safe.
 			messages, err := channel.Consume(q.Name, "consumer_tag1", false, false, false, true, nil)
@@ -165,10 +172,10 @@ func (r *RabbitMQ) Receive(exchange, queue string, handler Handler) (error) {
 					log.Error(err)
 				}
 				// Confirm receive this msg, multiple must be false.
-				err = msg.Ack(false)
-				if err != nil {
-					log.Error(err)
-				}
+				//err = msg.Ack(false)
+				//if err != nil {
+				//	log.Error(err)
+				//}
 			}
 			channel.Close()
 			time.Sleep(time.Second * 1)
@@ -186,12 +193,12 @@ func (r *RabbitMQ) GetUrl() (string) {
 		log.Panic("[RabbitMQ] client is not initialize")
 		return ""
 	}
-	return r.Url
+	return r.url
 }
 
 // Close the RabbitMQ connection, at the same time, channel will be closed.
 func (r *RabbitMQ) Close(topic, queue string) (error) {
-	channel, err := r.Conn.Channel()
+	channel, err := r.conn.Channel()
 	if err != nil {
 		return err
 	}
@@ -199,13 +206,13 @@ func (r *RabbitMQ) Close(topic, queue string) (error) {
 	if err != nil {
 		return err
 	}
-	err = r.Conn.Close()
+	err = r.conn.Close()
 	return err
 }
 
 // Test current connection is available or not.
 func (r *RabbitMQ) Ping() (err error) {
-	channel, err := r.Conn.Channel()
+	channel, err := r.conn.Channel()
 	if err != nil {
 		return
 	}
@@ -227,53 +234,32 @@ func (r *RabbitMQ) Ping() (err error) {
 	return err
 }
 
-// Add need listen timeout's object in pool.
-func (r *RabbitMQ) RegisterTimeoutPool(id int, content []byte) {
-	r.rw.Lock()
-	defer r.rw.Unlock()
-	r.TimeoutPool[id] = content
+func (r *RabbitMQ) SetTimeout(exchange string, channel *amqp.Channel) (error) {
+	queue := "TimeoutQueue"
+	timeoutRouteKey := exchange + "." + queue
+	options := make(amqp.Table)
+	options["x-message-ttl"] = int64(r.timeout * 1000)
+	options["x-dead-letter-exchange"] = exchange
+	options["x-dead-letter-routing-key"] = timeoutRouteKey
+	//options["x-expires"] = int64(r.timeout * 200)
+	r.options = options
+	outQueue, err := channel.QueueDeclare(
+		queue,
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+	if err != nil {
+		return err
+	}
+	err = channel.QueueBind(outQueue.Name, timeoutRouteKey, exchange, true, nil)
+	return err
 }
 
-func (r *RabbitMQ) ListenMessageTimeOut(queue, exchange string, id int, timeout time.Duration) () {
-	ticker := time.NewTicker(timeout)
-	go func(rabbit *RabbitMQ) {
-		for range ticker.C {
-			ch, err := rabbit.Conn.Channel()
-			if err != nil {
-				r.Error <- err
-			}
-			q, err := ch.QueueDeclare(
-				queue,
-				true,
-				false,
-				false,
-				true,
-				nil,
-			)
-			if err != nil {
-				r.Error <- err
-			}
-			routeKey := exchange + "." + queue
-			err = ch.QueueBind(q.Name, routeKey, exchange, true, nil)
-			if err != nil {
-				r.Error <- err
-			}
-			msg, ok, err := ch.Get(routeKey, true)
-			if err != nil || !ok {
-				log.Error("error: ", err)
-				r.Error <- err
-			}
-			if _, ok := r.TimeoutPool[id]; !ok {
-				err = errors.New("Forget register listener ? ")
-				r.Error <- err
-			}
-			if bytes.Equal(msg.Body, r.TimeoutPool[id]) {
-				r.Timeout <- id
-			}
-			err = msg.Ack(false)
-			if err != nil {
-				r.Error <- err
-			}
-		}
-	}(r)
+// Start listen the timeout message in exchange, route key is "exchange".timeoutQueue.
+func (r *RabbitMQ) ListenTimeOut(exchange string, handler Handler) (error) {
+	err := r.Receive(exchange, "TimeoutQueue", handler)
+	return err
 }
