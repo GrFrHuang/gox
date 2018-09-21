@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-var pv = NewPressureValve(3, 2000, 2, false)
+var pv = NewPressureValve(10, 2000, 5, false)
 
 func Handler(w http.ResponseWriter, r *http.Request) {
 	err := pv.FlowFilter()
