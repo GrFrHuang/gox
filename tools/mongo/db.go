@@ -38,7 +38,7 @@ type Config struct {
 	Host           string
 	Port           string
 	Direct         string // 主节点发生故障时, 是否与集群中其他被选举的节点建立连接
-	Timeout        string
+	Timeout        string // Timeout for request connect with mongodb server
 	Username       string
 	Password       string
 	MaxConnections string // Session.SetPoolLimit
@@ -86,6 +86,8 @@ func GetEngine() *Engine {
 	if err != nil {
 		log.Panic("[mongdb] ", err)
 	}
+	// Copy the mongodb client's session, just recycle use the same socket connection,
+	// if have not any free connection when copy, will create a new connection for return.
 	return &Engine{
 		Session: engine.Session.Clone(),
 	}

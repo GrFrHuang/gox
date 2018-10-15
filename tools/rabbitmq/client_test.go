@@ -11,7 +11,7 @@ var rabbit *RabbitMQ
 
 func TestRabbitMQ_Publish(t *testing.T) {
 	var err error
-	rabbit, err = NewRabbit("amqp://guest:guest@127.0.0.1:5672")
+	rabbit, err = NewRabbit("amqp://guest:guest@127.0.0.1:5672", 30)
 	if err != nil {
 		log.Error(err)
 		return
@@ -20,7 +20,7 @@ func TestRabbitMQ_Publish(t *testing.T) {
 		h := make(amqp.Table)
 		h["id_"+strconv.Itoa(i)] = strconv.Itoa(i + 100)
 		body := []byte("hello GrFrHuang " + strconv.Itoa(i))
-		err = rabbit.Publish("ex1", "test1", body, h, 30)
+		err = rabbit.Publish("ex1", "test1", body, h, true)
 		if err != nil {
 			log.Error(err)
 			return
@@ -32,7 +32,7 @@ func TestRabbitMQ_Publish(t *testing.T) {
 
 func TestRabbitMQ_Receive(t *testing.T) {
 	var err error
-	rabbit, err = NewRabbit("amqp://guest:guest@127.0.0.1:5672")
+	rabbit, err = NewRabbit("amqp://guest:guest@127.0.0.1:5672", 30)
 	if err != nil {
 		log.Error(err)
 		return
@@ -59,7 +59,7 @@ func TestRabbitMQ_Receive(t *testing.T) {
 
 func TestRabbitMQ_Receive3(t *testing.T) {
 	var err error
-	rabbit, err = NewRabbit("amqp://guest:guest@127.0.0.1:5672")
+	rabbit, err = NewRabbit("amqp://guest:guest@127.0.0.1:5672", 30)
 	if err != nil {
 		log.Error(err)
 		return
@@ -74,6 +74,7 @@ func TestRabbitMQ_Receive3(t *testing.T) {
 	timeoutRouteKey := "ex1" + "." + queue
 	options := make(amqp.Table)
 	options["x-message-ttl"] = int64(30 * 1000)
+	// 超时就进入死信队列
 	options["x-dead-letter-exchange"] = "ex1"
 	options["x-dead-letter-routing-key"] = timeoutRouteKey
 	rabbit.options = options
@@ -86,7 +87,7 @@ func TestRabbitMQ_Receive3(t *testing.T) {
 
 func TestRabbitMQ_Receive2(t *testing.T) {
 	var err error
-	rabbit, err = NewRabbit("amqp://guest:guest@127.0.0.1:5672")
+	rabbit, err = NewRabbit("amqp://guest:guest@127.0.0.1:5672", 30)
 	if err != nil {
 		log.Error(err)
 		return

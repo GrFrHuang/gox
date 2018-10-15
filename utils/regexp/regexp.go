@@ -11,7 +11,7 @@ import (
 func MobilePhone(str ...string) bool {
 	var yes bool
 	for _, s := range str {
-		yes, _ = regexp.MatchString(`^(13[0-9]|15[0-9]|18[0-9]|14[0-9]|17[0-9])\d{8}$`, s)
+		yes, _ = regexp.MatchString(`^(13[0-9]|19[0-9]|15[0-9]|18[0-9]|14[0-9]|17[0-9])\d{8}$`, s)
 		if !yes {
 			return yes
 		}
