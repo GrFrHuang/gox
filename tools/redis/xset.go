@@ -6,6 +6,7 @@
 package redis
 
 import (
+	"fmt"
 	_redis "github.com/gomodule/redigo/redis"
 )
 
@@ -56,10 +57,17 @@ func (redis *Redis) SMove(srcSet, distSet, member interface{}) (error) {
 // Redis is the ranking of members in a collection through scores.
 // The members of an ordered set are unique, but scores can be repeated.
 //...
-// Get all fields, values from hash table by table name.
-func (redis *Redis) ZAdd(set interface{}, member ...interface{}) ([]string, error) {
-	results, err := _redis.Strings(redis.conn.Do("ZADD", set))
-	return results, err
+// Adds one or more members to an ordered collection, or updates the score of an existing member.
+func (redis *Redis) ZAdd(set interface{}, member ...*SortedSet) (error) {
+	var err error
+	if len(member) < 1 {
+		err = fmt.Errorf("params error: %v", member)
+		return err
+	}
+	for _, v := range member {
+		_, err = redis.conn.Do("ZADD", set, v.Score, v.Member)
+	}
+	return err
 }
 
 // Get the number of members from sorted set.
@@ -88,4 +96,22 @@ func (redis *Redis) ZRevRange(set, start, stop interface{}, showScore bool) ([]s
 	}
 	results, err := _redis.Strings(redis.conn.Do("ZREVRANGE", set, start, stop, withScores))
 	return results, err
+}
+
+// Increment the number of a specified member in an ordered set.
+func (redis *Redis) ZIncrby(set, member interface{}, number float64) (error) {
+	_, err := redis.conn.Do("ZINCRBY", set, number, member)
+	return err
+}
+
+// Return the index of member.
+func (redis *Redis) ZRank(set, member interface{}) (int, error) {
+	index, err := _redis.Int(redis.conn.Do("ZRANK", set, member))
+	return index, err
+}
+
+// Returns the ranking of the specified members in an ordered set, sorted by decreasing value (from large to small).
+func (redis *Redis) ZRevrank(set, member interface{}) (int, error) {
+	place, err := _redis.Int(redis.conn.Do("ZREVRANK", set, member))
+	return place, err
 }
