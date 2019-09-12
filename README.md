@@ -1,5 +1,5 @@
 # gox
 a frame work by go
 
-`go get github.com/GrFrHuang/gox`
+`go get -u github.com/GrFrHuang/gox`
 
